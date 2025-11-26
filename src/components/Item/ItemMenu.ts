@@ -3,9 +3,8 @@ import { Menu, Platform, TFile, TFolder } from 'obsidian';
 import { Dispatch, StateUpdater, useCallback } from 'preact/hooks';
 import { StateManager } from 'src/StateManager';
 import { Path } from 'src/dnd/types';
-import { getEntityFromPath, insertEntity, moveEntity, removeEntity } from 'src/dnd/util/data';
+import { moveEntity, removeEntity } from 'src/dnd/util/data';
 import { t } from 'src/lang/helpers';
-import KanbanPlugin from 'src/main';
 
 import { BoardModifiers } from '../../helpers/boardModifiers';
 import { applyTemplate, escapeRegExpStr, generateInstanceId } from '../helpers';
@@ -20,45 +19,6 @@ import {
   getFullCalendarDataSync,
 } from './helpers';
 import { FileSuggestModal, LaneSuggestModal } from '../FileSuggest/FileSuggestModal';
-
-/**
- * Ensures a file has a StateManager and returns it
- */
-async function ensureStateManager(app: any, file: any, plugin: any): Promise<StateManager | null> {
-  try {
-    // Check if state manager already exists
-    if (plugin.stateManagers.has(file)) {
-      return plugin.stateManagers.get(file);
-    }
-
-    // Read the file content to create a state manager
-    const content = await app.vault.read(file);
-
-    // Create a temporary view-like object for state manager creation
-    const tempView = {
-      file: file,
-      app: app,
-      plugin: plugin,
-    };
-
-    // Create the state manager
-    const stateManager = new StateManager(
-      app,
-      tempView as any,
-      content,
-      () => plugin.stateManagers.delete(file),
-      () => plugin.settings
-    );
-
-    // Register it
-    plugin.stateManagers.set(file, stateManager);
-
-    return stateManager;
-  } catch (error) {
-    console.error('Error ensuring state manager for file:', file.path, error);
-    return null;
-  }
-}
 
 /**
  * Creates an Inbox list in a file that doesn't have kanban structure

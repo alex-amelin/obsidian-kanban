@@ -1,5 +1,5 @@
 import update from 'immutability-helper';
-import { Menu, Platform, TFile } from 'obsidian';
+import { Menu, Platform } from 'obsidian';
 import { Dispatch, StateUpdater, useContext, useEffect, useMemo, useState } from 'preact/hooks';
 import { Path } from 'src/dnd/types';
 import { defaultSort } from 'src/helpers/util';
