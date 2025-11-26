@@ -1,11 +1,11 @@
 {
-  "id": "kanban-plus",
-  "name": "Kanban Plus",
-  "version": "1.0.0",
-  "minAppVersion": "1.0.0",
-  "description": "Enhanced Kanban boards with cross-file card movement, calendar integration, and advanced workflow features.",
-  "author": "geetduggal",
-  "authorUrl": "https://github.com/geetduggal/kanban-plus",
-  "helpUrl": "https://github.com/geetduggal/kanban-plus#readme",
-  "isDesktopOnly": false
+	"id": "kanban-plus",
+	"name": "Kanban Plus",
+	"version": "1.1.0",
+	"minAppVersion": "1.0.0",
+	"description": "Enhanced Kanban boards with cross-file card movement, calendar integration, and advanced workflow features.",
+	"author": "geetduggal",
+	"authorUrl": "https://github.com/geetduggal/kanban-plus",
+	"helpUrl": "https://github.com/geetduggal/kanban-plus#readme",
+	"isDesktopOnly": false
 }
