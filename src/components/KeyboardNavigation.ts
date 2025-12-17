@@ -28,6 +28,12 @@ export class KeyboardNavigationManager {
       return;
     }
 
+    // Only handle keyboard events if this kanban view is in the active leaf
+    const activeLeaf = this.view.app.workspace.activeLeaf;
+    if (!activeLeaf || activeLeaf.view !== this.view) {
+      return;
+    }
+
     const board = this.stateManager.state;
     if (!board || !board.children || board.children.length === 0) {
       return;

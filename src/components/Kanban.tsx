@@ -136,11 +136,22 @@ export const Kanban = ({ view, stateManager }: KanbanProps) => {
       keyboardNavRef.current = new KeyboardNavigationManager(stateManager, view, rootRef.current);
       win.addEventListener('keydown', keyboardNavRef.current.handleKeyDown);
 
+      // Clear focus when switching away from this pane
+      const handleActiveLeafChange = () => {
+        const activeLeaf = view.app.workspace.activeLeaf;
+        if (activeLeaf?.view !== view && keyboardNavRef.current) {
+          keyboardNavRef.current.destroy();
+        }
+      };
+
+      view.app.workspace.on('active-leaf-change', handleActiveLeafChange);
+
       return () => {
         if (keyboardNavRef.current) {
           win.removeEventListener('keydown', keyboardNavRef.current.handleKeyDown);
           keyboardNavRef.current.destroy();
         }
+        view.app.workspace.off('active-leaf-change', handleActiveLeafChange);
       };
     }
   }, [stateManager, view, boardData]);
