@@ -74,6 +74,10 @@ export class KeyboardNavigationManager {
         e.preventDefault();
         this.showMenu(board);
         break;
+      case 'Enter':
+        e.preventDefault();
+        this.editCard(board);
+        break;
       case 'Escape':
         e.preventDefault();
         this.clearFocus();
@@ -262,6 +266,29 @@ export class KeyboardNavigationManager {
     if (cardElement) {
       const rect = cardElement.getBoundingClientRect();
       const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      });
+      cardElement.dispatchEvent(event);
+    }
+  }
+
+  private editCard(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const card = lane.children[this.focusedCard.cardIndex] as Item;
+    if (!card) return;
+
+    // Find the card element and trigger double-click to enter edit mode
+    const cardElement = this.findCardElement(card.id);
+    if (cardElement) {
+      const rect = cardElement.getBoundingClientRect();
+      const event = new MouseEvent('dblclick', {
         bubbles: true,
         cancelable: true,
         clientX: rect.left + rect.width / 2,

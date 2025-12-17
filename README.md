@@ -52,6 +52,7 @@ The original Kanban plugin features, plus:
 - **Arrow key navigation**: Navigate cards with up/down (within lists) and left/right (between lists)
 - **Visual focus indicator**: Blue outline shows currently selected card
 - **Quick actions**:
+  - `Enter` - Edit focused card
   - `f` - Move focused card to any file
   - `d` - Delete focused card
   - `>` - Open context menu for focused card
@@ -177,6 +178,7 @@ The original Kanban plugin features, plus:
 |-----|--------|
 | `↑` `↓` | Navigate cards within a list |
 | `←` `→` | Navigate between lists |
+| `Enter` | Edit focused card |
 | `f` | Move focused card to any file |
 | `d` | Delete focused card |
 | `>` | Open context menu for focused card |
