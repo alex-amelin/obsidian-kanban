@@ -148,8 +148,29 @@ export class KeyboardNavigationManager {
     const card = lane.children[this.focusedCard.cardIndex] as Item;
     if (!card) return;
 
+    const currentIndex = this.focusedCard.cardIndex;
+    const laneLength = lane.children.length;
     const path = [this.focusedCard.laneIndex, this.focusedCard.cardIndex];
+
+    // Execute the move
     handleAdHocMoveFromPath(this.stateManager, card, path);
+
+    // After move completes, focus on the next card in the list
+    // Use setTimeout to wait for state update
+    setTimeout(() => {
+      const updatedBoard = this.stateManager.state;
+      if (!updatedBoard || !this.focusedCard) return;
+
+      const updatedLane = updatedBoard.children[this.focusedCard.laneIndex];
+      if (!updatedLane || !updatedLane.children || updatedLane.children.length === 0) {
+        this.clearFocus();
+        return;
+      }
+
+      // Stay at same index if possible, otherwise move to last card
+      this.focusedCard.cardIndex = Math.min(currentIndex, updatedLane.children.length - 1);
+      this.updateVisualFocus();
+    }, 100);
   }
 
   private deleteCard(board: Board) {
@@ -158,16 +179,28 @@ export class KeyboardNavigationManager {
     const lane = board.children[this.focusedCard.laneIndex];
     if (!lane || !lane.children) return;
 
+    const currentIndex = this.focusedCard.cardIndex;
     const path = [this.focusedCard.laneIndex, this.focusedCard.cardIndex];
     const boardModifiers = getBoardModifiers(this.view, this.stateManager);
 
     boardModifiers.deleteEntity(path);
 
-    // Adjust focus after deletion
-    if (this.focusedCard.cardIndex >= lane.children.length - 1) {
-      this.focusedCard.cardIndex = Math.max(0, lane.children.length - 2);
-    }
-    this.updateVisualFocus();
+    // After deletion, focus on the next card (or previous if we deleted the last one)
+    // Use setTimeout to wait for state update
+    setTimeout(() => {
+      const updatedBoard = this.stateManager.state;
+      if (!updatedBoard || !this.focusedCard) return;
+
+      const updatedLane = updatedBoard.children[this.focusedCard.laneIndex];
+      if (!updatedLane || !updatedLane.children || updatedLane.children.length === 0) {
+        this.clearFocus();
+        return;
+      }
+
+      // Focus on the card at the same position, or the last card if we deleted the last one
+      this.focusedCard.cardIndex = Math.min(currentIndex, updatedLane.children.length - 1);
+      this.updateVisualFocus();
+    }, 100);
   }
 
   private showMenu(board: Board) {
