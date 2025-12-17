@@ -47,12 +47,27 @@ This philosophy powers the enhanced features: cross-file movement and calendar i
 
 The original Kanban plugin features, plus:
 
+#### ⌨️ **Keyboard Navigation & Shortcuts**
+
+- **Arrow key navigation**: Navigate cards with up/down (within lists) and left/right (between lists)
+- **Visual focus indicator**: Blue outline shows currently selected card
+- **Quick actions**:
+  - `f` - Move focused card to any file
+  - `d` - Delete focused card
+  - `>` - Open context menu for focused card
+  - `Escape` - Clear keyboard focus
+- **Hands-free workflow**: Manage entire board without touching the mouse
+- **Smart scrolling**: Auto-scroll to keep focused card visible
+
 #### 🔗 **Advanced Card & List Movement**
 
 - **Ad-hoc card moves**: Move any card to any file in your vault with fuzzy search
 - **List transfer**: Move entire lists between files with merge or separate options
 - **Associated file movement**: Pre-configured quick access to frequently used boards
-- **Smart list selection**: Choose destination list or create new ones on the fly
+- **Smart list selection**:
+  - Automatically appends to single-lane files without prompting
+  - Choose destination list when multiple lanes exist
+  - Create new "Inbox" list on the fly
 - **Unified workflow management** across projects and contexts
 - **Smart metadata injection**: Automatically adds kanban metadata to target files
 
@@ -144,6 +159,35 @@ The original Kanban plugin features, plus:
    - **Merge into existing list**: Adds all cards to selected list
    - **Keep as separate list**: Creates new list with same name
 5. List and all cards move atomically
+
+## ⌨️ Keyboard Navigation
+
+### Quick Start
+
+1. Open any Kanban board with cards
+2. Press any **arrow key** to activate keyboard navigation
+3. A **blue outline** appears around the focused card
+4. Navigate with arrow keys:
+   - `↑` / `↓` - Move up/down within the current list
+   - `←` / `→` - Move left/right between lists
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` | Navigate cards within a list |
+| `←` `→` | Navigate between lists |
+| `f` | Move focused card to any file |
+| `d` | Delete focused card |
+| `>` | Open context menu for focused card |
+| `Escape` | Clear keyboard focus |
+
+### Tips
+
+- **Hands-free workflow**: Navigate and manage cards without the mouse
+- **Visual feedback**: The blue outline clearly shows which card has focus
+- **Auto-scrolling**: Focused cards automatically scroll into view
+- **Works everywhere**: Keyboard navigation is active on any kanban board
 
 ## 📅 Calendar Integration
 

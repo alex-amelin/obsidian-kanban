@@ -97,7 +97,11 @@ async function handleAdHocMove(
         }
       }
 
-      if (lanes.length > 0) {
+      if (lanes.length === 1) {
+        // Automatically move to the single lane without prompting
+        await moveCardToAssociatedFile(stateManager, targetFile, cardItem, cardPath, lanes[0]);
+      } else if (lanes.length > 1) {
+        // Show lane selector for multiple lanes
         const laneSuggest = new LaneSuggestModal(app, lanes, async (selectedLane) => {
           await moveCardToAssociatedFile(stateManager, targetFile, cardItem, cardPath, selectedLane);
         }, false);
@@ -747,4 +751,13 @@ export function useItemMenu({
     },
     [setEditState, item, path, boardModifiers, stateManager]
   );
+}
+
+// Export for keyboard navigation
+export function handleAdHocMoveFromPath(
+  stateManager: StateManager,
+  cardItem: Item,
+  cardPath: Path
+) {
+  return handleAdHocMove(stateManager, cardItem, cardPath);
 }

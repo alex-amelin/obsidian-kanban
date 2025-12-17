@@ -1,0 +1,254 @@
+import { StateManager } from 'src/StateManager';
+import { KanbanView } from 'src/KanbanView';
+import { getBoardModifiers } from 'src/helpers/boardModifiers';
+import { Board, Item } from './types';
+import { handleAdHocMoveFromPath } from './Item/ItemMenu';
+
+interface FocusedCard {
+  laneIndex: number;
+  cardIndex: number;
+}
+
+export class KeyboardNavigationManager {
+  private focusedCard: FocusedCard | null = null;
+  private stateManager: StateManager;
+  private view: KanbanView;
+  private rootElement: HTMLElement;
+
+  constructor(stateManager: StateManager, view: KanbanView, rootElement: HTMLElement) {
+    this.stateManager = stateManager;
+    this.view = view;
+    this.rootElement = rootElement;
+  }
+
+  handleKeyDown = (e: KeyboardEvent) => {
+    // Don't intercept if user is typing in an input or textarea
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+
+    const board = this.stateManager.state;
+    if (!board || !board.children || board.children.length === 0) {
+      return;
+    }
+
+    // Initialize focus if not set
+    if (!this.focusedCard) {
+      this.focusedCard = { laneIndex: 0, cardIndex: 0 };
+      this.updateVisualFocus();
+    }
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        this.moveFocusUp(board);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        this.moveFocusDown(board);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        this.moveFocusLeft(board);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        this.moveFocusRight(board);
+        break;
+      case 'f':
+        e.preventDefault();
+        this.executeAdHocMove(board);
+        break;
+      case 'd':
+        e.preventDefault();
+        this.deleteCard(board);
+        break;
+      case '>':
+        e.preventDefault();
+        this.showMenu(board);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        this.clearFocus();
+        break;
+    }
+  };
+
+  private moveFocusUp(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    if (this.focusedCard.cardIndex > 0) {
+      this.focusedCard.cardIndex--;
+      this.updateVisualFocus();
+    }
+  }
+
+  private moveFocusDown(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    if (this.focusedCard.cardIndex < lane.children.length - 1) {
+      this.focusedCard.cardIndex++;
+      this.updateVisualFocus();
+    }
+  }
+
+  private moveFocusLeft(board: Board) {
+    if (!this.focusedCard) return;
+
+    if (this.focusedCard.laneIndex > 0) {
+      this.focusedCard.laneIndex--;
+      // Clamp card index to new lane's length
+      const newLane = board.children[this.focusedCard.laneIndex];
+      if (newLane && newLane.children) {
+        this.focusedCard.cardIndex = Math.min(
+          this.focusedCard.cardIndex,
+          newLane.children.length - 1
+        );
+      }
+      this.updateVisualFocus();
+    }
+  }
+
+  private moveFocusRight(board: Board) {
+    if (!this.focusedCard) return;
+
+    if (this.focusedCard.laneIndex < board.children.length - 1) {
+      this.focusedCard.laneIndex++;
+      // Clamp card index to new lane's length
+      const newLane = board.children[this.focusedCard.laneIndex];
+      if (newLane && newLane.children) {
+        this.focusedCard.cardIndex = Math.min(
+          this.focusedCard.cardIndex,
+          newLane.children.length - 1
+        );
+      }
+      this.updateVisualFocus();
+    }
+  }
+
+  private executeAdHocMove(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const card = lane.children[this.focusedCard.cardIndex] as Item;
+    if (!card) return;
+
+    const path = [this.focusedCard.laneIndex, this.focusedCard.cardIndex];
+    handleAdHocMoveFromPath(this.stateManager, card, path);
+  }
+
+  private deleteCard(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const path = [this.focusedCard.laneIndex, this.focusedCard.cardIndex];
+    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
+
+    boardModifiers.deleteEntity(path);
+
+    // Adjust focus after deletion
+    if (this.focusedCard.cardIndex >= lane.children.length - 1) {
+      this.focusedCard.cardIndex = Math.max(0, lane.children.length - 2);
+    }
+    this.updateVisualFocus();
+  }
+
+  private showMenu(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const card = lane.children[this.focusedCard.cardIndex] as Item;
+    if (!card) return;
+
+    // Find the card element and trigger context menu
+    const cardElement = this.findCardElement(card.id);
+    if (cardElement) {
+      const rect = cardElement.getBoundingClientRect();
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      });
+      cardElement.dispatchEvent(event);
+    }
+  }
+
+  private updateVisualFocus() {
+    // Remove existing focus
+    const existing = this.rootElement.querySelector('.kanban-plugin__item--keyboard-focused');
+    if (existing) {
+      existing.classList.remove('kanban-plugin__item--keyboard-focused');
+    }
+
+    if (!this.focusedCard) return;
+
+    const board = this.stateManager.state;
+    if (!board || !board.children) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const card = lane.children[this.focusedCard.cardIndex] as Item;
+    if (!card) return;
+
+    const cardElement = this.findCardElement(card.id);
+    if (cardElement) {
+      cardElement.classList.add('kanban-plugin__item--keyboard-focused');
+
+      // Scroll into view if needed
+      cardElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }
+
+  private findCardElement(cardId: string): HTMLElement | null {
+    // Find card by data attribute or by searching through items
+    const items = this.rootElement.querySelectorAll('.kanban-plugin__item');
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i] as HTMLElement;
+      // The card ID is part of the drag-drop system, we'll need to find it by position
+      // For now, we'll use a simpler approach
+    }
+
+    // Alternative: find by position
+    const lanes = this.rootElement.querySelectorAll('.kanban-plugin__lane');
+    if (this.focusedCard && lanes[this.focusedCard.laneIndex]) {
+      const lane = lanes[this.focusedCard.laneIndex];
+      const cards = lane.querySelectorAll('.kanban-plugin__item');
+      if (cards[this.focusedCard.cardIndex]) {
+        return cards[this.focusedCard.cardIndex] as HTMLElement;
+      }
+    }
+
+    return null;
+  }
+
+  private clearFocus() {
+    const existing = this.rootElement.querySelector('.kanban-plugin__item--keyboard-focused');
+    if (existing) {
+      existing.classList.remove('kanban-plugin__item--keyboard-focused');
+    }
+    this.focusedCard = null;
+  }
+
+  public destroy() {
+    this.clearFocus();
+  }
+}

@@ -10,6 +10,7 @@ import { SortPlaceholder } from 'src/dnd/components/SortPlaceholder';
 import { Sortable } from 'src/dnd/components/Sortable';
 import { createHTMLDndHandlers } from 'src/dnd/managers/DragManager';
 import { t } from 'src/lang/helpers';
+import { KeyboardNavigationManager } from './KeyboardNavigation';
 
 import { DndScope } from '../dnd/components/Scope';
 import { getBoardModifiers } from '../helpers/boardModifiers';
@@ -52,6 +53,7 @@ export const Kanban = ({ view, stateManager }: KanbanProps) => {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const keyboardNavRef = useRef<KeyboardNavigationManager | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -126,6 +128,22 @@ export const Kanban = ({ view, stateManager }: KanbanProps) => {
       searchRef.current?.focus();
     }
   }, [isSearching]);
+
+  // Initialize keyboard navigation
+  useEffect(() => {
+    if (rootRef.current && boardData) {
+      const win = view.getWindow();
+      keyboardNavRef.current = new KeyboardNavigationManager(stateManager, view, rootRef.current);
+      win.addEventListener('keydown', keyboardNavRef.current.handleKeyDown);
+
+      return () => {
+        if (keyboardNavRef.current) {
+          win.removeEventListener('keydown', keyboardNavRef.current.handleKeyDown);
+          keyboardNavRef.current.destroy();
+        }
+      };
+    }
+  }, [stateManager, view, boardData]);
 
   useEffect(() => {
     const win = view.getWindow();
@@ -225,7 +243,7 @@ export const Kanban = ({ view, stateManager }: KanbanProps) => {
             ])}
             {...html5DragHandlers}
           >
-            {(isLaneFormVisible || boardData.children.length === 0) && (
+            {(isLaneFormVisible || boardData.children?.length === 0) && (
               <LaneForm onNewLane={onNewLane} closeLaneForm={closeLaneForm} />
             )}
             {isSearching && (
@@ -278,11 +296,11 @@ export const Kanban = ({ view, stateManager }: KanbanProps) => {
               >
                 <div>
                   <Sortable axis={axis}>
-                    <Lanes lanes={boardData.children} collapseDir={axis} />
+                    <Lanes lanes={boardData.children || []} collapseDir={axis} />
                     <SortPlaceholder
                       accepts={boardAccepts}
                       className={c('lane-placeholder')}
-                      index={boardData.children.length}
+                      index={boardData.children?.length || 0}
                     />
                   </Sortable>
                 </div>

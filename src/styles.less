@@ -1945,3 +1945,11 @@ body:not(.native-scrollbars) .kanban-plugin__scroll-container::-webkit-scrollbar
   padding: 4px 8px;
   font-size: 0.8em;
 }
+
+// Keyboard navigation focus indicator
+.kanban-plugin__item--keyboard-focused {
+  outline: 3px solid var(--interactive-accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(var(--interactive-accent-rgb), 0.2) !important;
+  z-index: 10 !important;
+}
