@@ -58,7 +58,6 @@ The original Kanban plugin features, plus:
   - `d` - Delete focused card
   - `j` - Move focused card down in list
   - `k` - Move focused card up in list
-  - `>` - Open context menu for focused card
   - `Escape` - Clear keyboard focus
 - **Hands-free workflow**: Manage entire board without touching the mouse
 - **Smart scrolling**: Auto-scroll to keep focused card visible
@@ -187,7 +186,6 @@ The original Kanban plugin features, plus:
 | `d` | Delete focused card |
 | `j` | Move focused card down in list |
 | `k` | Move focused card up in list |
-| `>` | Open context menu for focused card |
 | `Escape` | Clear keyboard focus |
 
 ### Tips

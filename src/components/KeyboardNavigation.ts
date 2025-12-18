@@ -3,6 +3,7 @@ import { KanbanView } from 'src/KanbanView';
 import { getBoardModifiers } from 'src/helpers/boardModifiers';
 import { Board, Item } from './types';
 import { handleAdHocMoveFromPath } from './Item/ItemMenu';
+import { moveEntity } from 'src/dnd/util/data';
 
 interface FocusedCard {
   laneIndex: number;
@@ -69,10 +70,6 @@ export class KeyboardNavigationManager {
       case 'd':
         e.preventDefault();
         this.deleteCard(board);
-        break;
-      case '>':
-        e.preventDefault();
-        this.showMenu(board);
         break;
       case 'Enter':
         e.preventDefault();
@@ -269,29 +266,6 @@ export class KeyboardNavigationManager {
     setTimeout(() => attemptRefocus(), 50);
   }
 
-  private showMenu(board: Board) {
-    if (!this.focusedCard) return;
-
-    const lane = board.children[this.focusedCard.laneIndex];
-    if (!lane || !lane.children) return;
-
-    const card = lane.children[this.focusedCard.cardIndex] as Item;
-    if (!card) return;
-
-    // Find the card element and trigger context menu
-    const cardElement = this.findCardElement(card.id);
-    if (cardElement) {
-      const rect = cardElement.getBoundingClientRect();
-      const event = new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-      });
-      cardElement.dispatchEvent(event);
-    }
-  }
-
   private editCard(board: Board) {
     if (!this.focusedCard) return;
 
@@ -346,13 +320,8 @@ export class KeyboardNavigationManager {
     const fromPath = [laneIndex, cardIndex];
     const toPath = [laneIndex, cardIndex - 1];
 
-    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
-
     // Move the card up
-    this.stateManager.setState((boardData) => {
-      const { moveEntity } = require('src/dnd/util/data');
-      return moveEntity(boardData, fromPath, toPath);
-    });
+    this.stateManager.setState((boardData) => moveEntity(boardData, fromPath, toPath));
 
     // Update focus to follow the card
     this.focusedCard.cardIndex = cardIndex - 1;
@@ -372,13 +341,8 @@ export class KeyboardNavigationManager {
     const fromPath = [laneIndex, cardIndex];
     const toPath = [laneIndex, cardIndex + 1];
 
-    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
-
     // Move the card down
-    this.stateManager.setState((boardData) => {
-      const { moveEntity } = require('src/dnd/util/data');
-      return moveEntity(boardData, fromPath, toPath);
-    });
+    this.stateManager.setState((boardData) => moveEntity(boardData, fromPath, toPath));
 
     // Update focus to follow the card
     this.focusedCard.cardIndex = cardIndex + 1;
