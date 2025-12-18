@@ -3,7 +3,7 @@ import { KanbanView } from 'src/KanbanView';
 import { getBoardModifiers } from 'src/helpers/boardModifiers';
 import { Board, Item } from './types';
 import { handleAdHocMoveFromPath } from './Item/ItemMenu';
-import { moveEntity } from 'src/dnd/util/data';
+import update from 'immutability-helper';
 
 interface FocusedCard {
   laneIndex: number;
@@ -317,14 +317,27 @@ export class KeyboardNavigationManager {
     if (cardIndex === 0) return; // Already at top
 
     const laneIndex = this.focusedCard.laneIndex;
-    const fromPath = [laneIndex, cardIndex];
-    const toPath = [laneIndex, cardIndex - 1];
+    const newIndex = cardIndex - 1;
 
-    // Move the card up
-    this.stateManager.setState((boardData) => moveEntity(boardData, fromPath, toPath));
+    // Swap the current card with the one above it
+    const currentCard = lane.children[cardIndex];
+    const cardAbove = lane.children[cardIndex - 1];
 
-    // Update focus to follow the card
-    this.focusedCard.cardIndex = cardIndex - 1;
+    this.stateManager.setState((boardData) => {
+      return update(boardData, {
+        children: {
+          [laneIndex]: {
+            children: {
+              [cardIndex - 1]: { $set: currentCard },
+              [cardIndex]: { $set: cardAbove },
+            },
+          },
+        },
+      });
+    });
+
+    // Restore focus to the card at its new position
+    this.focusedCard = { laneIndex, cardIndex: newIndex };
     setTimeout(() => this.updateVisualFocus(), 50);
   }
 
@@ -338,14 +351,27 @@ export class KeyboardNavigationManager {
     if (cardIndex >= lane.children.length - 1) return; // Already at bottom
 
     const laneIndex = this.focusedCard.laneIndex;
-    const fromPath = [laneIndex, cardIndex];
-    const toPath = [laneIndex, cardIndex + 1];
+    const newIndex = cardIndex + 1;
 
-    // Move the card down
-    this.stateManager.setState((boardData) => moveEntity(boardData, fromPath, toPath));
+    // Swap the current card with the one below it
+    const currentCard = lane.children[cardIndex];
+    const cardBelow = lane.children[cardIndex + 1];
 
-    // Update focus to follow the card
-    this.focusedCard.cardIndex = cardIndex + 1;
+    this.stateManager.setState((boardData) => {
+      return update(boardData, {
+        children: {
+          [laneIndex]: {
+            children: {
+              [cardIndex]: { $set: cardBelow },
+              [cardIndex + 1]: { $set: currentCard },
+            },
+          },
+        },
+      });
+    });
+
+    // Restore focus to the card at its new position
+    this.focusedCard = { laneIndex, cardIndex: newIndex };
     setTimeout(() => this.updateVisualFocus(), 50);
   }
 
