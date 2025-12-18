@@ -8,6 +8,7 @@ import update from 'immutability-helper';
 interface FocusedCard {
   laneIndex: number;
   cardIndex: number;
+  cardId: string;
 }
 
 export class KeyboardNavigationManager {
@@ -15,6 +16,7 @@ export class KeyboardNavigationManager {
   private stateManager: StateManager;
   private view: KanbanView;
   private rootElement: HTMLElement;
+  private isMoving: boolean = false;
 
   constructor(stateManager: StateManager, view: KanbanView, rootElement: HTMLElement) {
     this.stateManager = stateManager;
@@ -42,8 +44,12 @@ export class KeyboardNavigationManager {
 
     // Initialize focus if not set
     if (!this.focusedCard) {
-      this.focusedCard = { laneIndex: 0, cardIndex: 0 };
-      this.updateVisualFocus();
+      const firstLane = board.children[0];
+      if (firstLane && firstLane.children && firstLane.children.length > 0) {
+        const firstCard = firstLane.children[0] as Item;
+        this.focusedCard = { laneIndex: 0, cardIndex: 0, cardId: firstCard.id };
+        this.updateVisualFocus();
+      }
     }
 
     switch (e.key) {
@@ -101,7 +107,13 @@ export class KeyboardNavigationManager {
     if (!lane || !lane.children) return;
 
     if (this.focusedCard.cardIndex > 0) {
-      this.focusedCard.cardIndex--;
+      const newIndex = this.focusedCard.cardIndex - 1;
+      const newCard = lane.children[newIndex] as Item;
+      this.focusedCard = {
+        laneIndex: this.focusedCard.laneIndex,
+        cardIndex: newIndex,
+        cardId: newCard.id
+      };
       this.updateVisualFocus();
     }
   }
@@ -113,7 +125,13 @@ export class KeyboardNavigationManager {
     if (!lane || !lane.children) return;
 
     if (this.focusedCard.cardIndex < lane.children.length - 1) {
-      this.focusedCard.cardIndex++;
+      const newIndex = this.focusedCard.cardIndex + 1;
+      const newCard = lane.children[newIndex] as Item;
+      this.focusedCard = {
+        laneIndex: this.focusedCard.laneIndex,
+        cardIndex: newIndex,
+        cardId: newCard.id
+      };
       this.updateVisualFocus();
     }
   }
@@ -122,14 +140,20 @@ export class KeyboardNavigationManager {
     if (!this.focusedCard) return;
 
     if (this.focusedCard.laneIndex > 0) {
-      this.focusedCard.laneIndex--;
+      const newLaneIndex = this.focusedCard.laneIndex - 1;
       // Clamp card index to new lane's length
-      const newLane = board.children[this.focusedCard.laneIndex];
-      if (newLane && newLane.children) {
-        this.focusedCard.cardIndex = Math.min(
+      const newLane = board.children[newLaneIndex];
+      if (newLane && newLane.children && newLane.children.length > 0) {
+        const newCardIndex = Math.min(
           this.focusedCard.cardIndex,
           newLane.children.length - 1
         );
+        const newCard = newLane.children[newCardIndex] as Item;
+        this.focusedCard = {
+          laneIndex: newLaneIndex,
+          cardIndex: newCardIndex,
+          cardId: newCard.id
+        };
       }
       this.updateVisualFocus();
     }
@@ -139,14 +163,20 @@ export class KeyboardNavigationManager {
     if (!this.focusedCard) return;
 
     if (this.focusedCard.laneIndex < board.children.length - 1) {
-      this.focusedCard.laneIndex++;
+      const newLaneIndex = this.focusedCard.laneIndex + 1;
       // Clamp card index to new lane's length
-      const newLane = board.children[this.focusedCard.laneIndex];
-      if (newLane && newLane.children) {
-        this.focusedCard.cardIndex = Math.min(
+      const newLane = board.children[newLaneIndex];
+      if (newLane && newLane.children && newLane.children.length > 0) {
+        const newCardIndex = Math.min(
           this.focusedCard.cardIndex,
           newLane.children.length - 1
         );
+        const newCard = newLane.children[newCardIndex] as Item;
+        this.focusedCard = {
+          laneIndex: newLaneIndex,
+          cardIndex: newCardIndex,
+          cardId: newCard.id
+        };
       }
       this.updateVisualFocus();
     }
@@ -176,8 +206,15 @@ export class KeyboardNavigationManager {
     const attemptRefocus = (attempt = 0) => {
       if (attempt > 40) {
         // If we gave up, restore focus to the original card (user likely cancelled)
-        this.focusedCard = { laneIndex, cardIndex: Math.min(currentIndex, originalLength - 1) };
-        this.updateVisualFocus();
+        const newIndex = Math.min(currentIndex, originalLength - 1);
+        const updatedBoard = this.stateManager.state;
+        if (updatedBoard && updatedBoard.children[laneIndex] && updatedBoard.children[laneIndex].children) {
+          const cardAtPos = updatedBoard.children[laneIndex].children[newIndex] as Item;
+          if (cardAtPos) {
+            this.focusedCard = { laneIndex, cardIndex: newIndex, cardId: cardAtPos.id };
+            this.updateVisualFocus();
+          }
+        }
         return;
       }
 
@@ -206,8 +243,11 @@ export class KeyboardNavigationManager {
 
       // Restore focus to the next card
       const newIndex = Math.min(currentIndex, currentLength - 1);
-      this.focusedCard = { laneIndex, cardIndex: newIndex };
-      this.updateVisualFocus();
+      const cardAtPos = updatedLane.children[newIndex] as Item;
+      if (cardAtPos) {
+        this.focusedCard = { laneIndex, cardIndex: newIndex, cardId: cardAtPos.id };
+        this.updateVisualFocus();
+      }
     };
 
     // Start checking after 500ms to give user time to interact with modal
@@ -259,8 +299,11 @@ export class KeyboardNavigationManager {
 
       // Restore focus to the next card
       const newIndex = Math.min(currentIndex, updatedLane.children.length - 1);
-      this.focusedCard = { laneIndex, cardIndex: newIndex };
-      this.updateVisualFocus();
+      const cardAtPos = updatedLane.children[newIndex] as Item;
+      if (cardAtPos) {
+        this.focusedCard = { laneIndex, cardIndex: newIndex, cardId: cardAtPos.id };
+        this.updateVisualFocus();
+      }
     };
 
     setTimeout(() => attemptRefocus(), 50);
@@ -309,21 +352,29 @@ export class KeyboardNavigationManager {
 
   private moveCardUp(board: Board) {
     if (!this.focusedCard) return;
+    if (this.isMoving) return; // Prevent concurrent moves
 
-    const lane = board.children[this.focusedCard.laneIndex];
-    if (!lane || !lane.children) return;
+    const movedCardId = this.focusedCard.cardId;
 
+    // Trust focusedCard position - don't search the state which might be stale
+    const laneIndex = this.focusedCard.laneIndex;
     const cardIndex = this.focusedCard.cardIndex;
+
     if (cardIndex === 0) return; // Already at top
 
-    const laneIndex = this.focusedCard.laneIndex;
-    const newIndex = cardIndex - 1;
-
-    // Swap the current card with the one above it
-    const currentCard = lane.children[cardIndex];
-    const cardAbove = lane.children[cardIndex - 1];
+    // Set lock
+    this.isMoving = true;
 
     this.stateManager.setState((boardData) => {
+      // Read cards from boardData, not from this.stateManager.state
+      const lane = boardData.children[laneIndex];
+      if (!lane || !lane.children) return boardData;
+      if (cardIndex === 0) return boardData; // Already at top
+      if (cardIndex >= lane.children.length) return boardData;
+
+      const currentCard = lane.children[cardIndex];
+      const cardAbove = lane.children[cardIndex - 1];
+
       return update(boardData, {
         children: {
           [laneIndex]: {
@@ -336,28 +387,38 @@ export class KeyboardNavigationManager {
       });
     });
 
-    // Restore focus to the card at its new position
-    this.focusedCard = { laneIndex, cardIndex: newIndex };
-    setTimeout(() => this.updateVisualFocus(), 50);
+    // Wait for DOM to update
+    setTimeout(() => {
+      // Update to new position
+      const newIndex = cardIndex - 1;
+      this.focusedCard = { laneIndex: laneIndex, cardIndex: newIndex, cardId: movedCardId };
+      this.updateVisualFocus();
+      this.isMoving = false;
+    }, 50);
   }
 
   private moveCardDown(board: Board) {
     if (!this.focusedCard) return;
+    if (this.isMoving) return; // Prevent concurrent moves
 
-    const lane = board.children[this.focusedCard.laneIndex];
-    if (!lane || !lane.children) return;
+    const movedCardId = this.focusedCard.cardId;
 
-    const cardIndex = this.focusedCard.cardIndex;
-    if (cardIndex >= lane.children.length - 1) return; // Already at bottom
-
+    // Trust focusedCard position - don't search the state which might be stale
     const laneIndex = this.focusedCard.laneIndex;
-    const newIndex = cardIndex + 1;
+    const cardIndex = this.focusedCard.cardIndex;
 
-    // Swap the current card with the one below it
-    const currentCard = lane.children[cardIndex];
-    const cardBelow = lane.children[cardIndex + 1];
+    // Set lock
+    this.isMoving = true;
 
     this.stateManager.setState((boardData) => {
+      // Read cards from boardData, not from this.stateManager.state
+      const lane = boardData.children[laneIndex];
+      if (!lane || !lane.children) return boardData;
+      if (cardIndex >= lane.children.length - 1) return boardData; // Already at bottom
+
+      const currentCard = lane.children[cardIndex];
+      const cardBelow = lane.children[cardIndex + 1];
+
       return update(boardData, {
         children: {
           [laneIndex]: {
@@ -370,9 +431,14 @@ export class KeyboardNavigationManager {
       });
     });
 
-    // Restore focus to the card at its new position
-    this.focusedCard = { laneIndex, cardIndex: newIndex };
-    setTimeout(() => this.updateVisualFocus(), 50);
+    // Wait for DOM to update
+    setTimeout(() => {
+      // Update to new position
+      const newIndex = cardIndex + 1;
+      this.focusedCard = { laneIndex: laneIndex, cardIndex: newIndex, cardId: movedCardId };
+      this.updateVisualFocus();
+      this.isMoving = false;
+    }, 50);
   }
 
   private updateVisualFocus() {
@@ -384,16 +450,8 @@ export class KeyboardNavigationManager {
 
     if (!this.focusedCard) return;
 
-    const board = this.stateManager.state;
-    if (!board || !board.children) return;
-
-    const lane = board.children[this.focusedCard.laneIndex];
-    if (!lane || !lane.children) return;
-
-    const card = lane.children[this.focusedCard.cardIndex] as Item;
-    if (!card) return;
-
-    const cardElement = this.findCardElement(card.id);
+    // Use focusedCard.cardId directly - don't read from state which might be stale
+    const cardElement = this.findCardElement(this.focusedCard.cardId);
     if (cardElement) {
       cardElement.classList.add('kanban-plugin__item--keyboard-focused');
 
@@ -407,17 +465,12 @@ export class KeyboardNavigationManager {
   }
 
   private findCardElement(cardId: string): HTMLElement | null {
-    // Find card by data attribute or by searching through items
-    const items = this.rootElement.querySelectorAll('.kanban-plugin__item');
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i] as HTMLElement;
-      // The card ID is part of the drag-drop system, we'll need to find it by position
-      // For now, we'll use a simpler approach
-    }
+    if (!this.focusedCard) return null;
 
-    // Alternative: find by position
+    // Trust that focusedCard is already correct from the ID-based search in move functions
+    // Just do a simple position-based lookup
     const lanes = this.rootElement.querySelectorAll('.kanban-plugin__lane');
-    if (this.focusedCard && lanes[this.focusedCard.laneIndex]) {
+    if (lanes[this.focusedCard.laneIndex]) {
       const lane = lanes[this.focusedCard.laneIndex];
       const cards = lane.querySelectorAll('.kanban-plugin__item');
       if (cards[this.focusedCard.cardIndex]) {

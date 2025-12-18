@@ -905,19 +905,34 @@ export async function createCalendarEvent(
 ): Promise<boolean> {
   try {
     const cardTitle = item.data.titleRaw.split('\n')[0].trim();
-    
-    // Remove hashtags from the title before creating the calendar event filename
-    // This ensures calendar event files have clean names without hashtag clutter
-    const titleWithoutHashtags = cardTitle
-      .replace(/#[^\s#]+/g, '') // Remove hashtags completely
-      .replace(/\s+/g, ' ')    // Normalize multiple spaces to single space
-      .trim();                 // Remove leading/trailing whitespace
-    const sanitizedTitle = sanitizeFileName(titleWithoutHashtags);
-    
+    const fullCardContent = item.data.titleRaw.trim();
+
+    // Remove hashtags and images from the title for the event title/filename
+    // This ensures calendar event files have clean, short names
+    let titleWithoutHashtags = cardTitle
+      .replace(/#[^\s#]+/g, '')           // Remove hashtags
+      .replace(/!\[\[([^\]]*)\]\]/g, '')  // Remove image embeds like ![[image.png]]
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '') // Remove markdown images like ![alt](image.png)
+      .replace(/\[\[([^\]]*)\]\]/g, '$1') // Extract text from wikilinks [[link]]
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Extract text from markdown links [text](url)
+      .replace(/\s+/g, ' ')               // Normalize multiple spaces to single space
+      .trim();                            // Remove leading/trailing whitespace
+
+    // If the title is empty or very short after cleanup, generate a default title
+    if (!titleWithoutHashtags || titleWithoutHashtags.length < 3) {
+      // Use a timestamp-based title for cards that are just images/links
+      titleWithoutHashtags = `Event ${moment().format('HH:mm')}`;
+    }
+
+    // Further limit the title length for the filename and frontmatter
+    const sanitizedTitle = sanitizeFileName(titleWithoutHashtags, 50);
+
     const today = moment().format('YYYY-MM-DD');
     const tomorrow = moment().add(1, 'day').format('YYYY-MM-DD');
-    
+
     const fileName = `${today} ${sanitizedTitle}.md`;
+
+    // Include the full card content in the calendar note body
     const fileContent = `---
 title: ${sanitizedTitle}
 allDay: true
@@ -925,6 +940,8 @@ date: ${today}
 endDate: ${tomorrow}
 completed: null
 ---
+
+${fullCardContent}
 `;
 
     // Get the target directory from the calendar configuration
