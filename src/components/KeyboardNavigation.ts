@@ -287,14 +287,18 @@ export class KeyboardNavigationManager {
     // Find the card element and trigger double-click to enter edit mode
     const cardElement = this.findCardElement(card.id);
     if (cardElement) {
-      const rect = cardElement.getBoundingClientRect();
-      const event = new MouseEvent('dblclick', {
-        bubbles: true,
-        cancelable: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-      });
-      cardElement.dispatchEvent(event);
+      // The dblclick handler is on the .kanban-plugin__item-content-wrapper element
+      const contentWrapper = cardElement.querySelector('.kanban-plugin__item-content-wrapper');
+      if (contentWrapper) {
+        const rect = contentWrapper.getBoundingClientRect();
+        const event = new MouseEvent('dblclick', {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        });
+        contentWrapper.dispatchEvent(event);
+      }
     }
   }
 
