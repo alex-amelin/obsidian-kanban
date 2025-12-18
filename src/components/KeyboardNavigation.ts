@@ -78,6 +78,18 @@ export class KeyboardNavigationManager {
         e.preventDefault();
         this.editCard(board);
         break;
+      case 'a':
+        e.preventDefault();
+        this.addCard(board);
+        break;
+      case 'j':
+        e.preventDefault();
+        this.moveCardDown(board);
+        break;
+      case 'k':
+        e.preventDefault();
+        this.moveCardUp(board);
+        break;
       case 'Escape':
         e.preventDefault();
         this.clearFocus();
@@ -163,9 +175,12 @@ export class KeyboardNavigationManager {
 
     // After move completes, focus on the next card in the list
     // The move operation involves modals and user interaction, so we need to wait longer
-    // and check with longer intervals
+    // Cross-file moves can take 5+ seconds, so we need generous timeout
     const attemptRefocus = (attempt = 0) => {
-      if (attempt > 20) {
+      if (attempt > 40) {
+        // If we gave up, restore focus to the original card (user likely cancelled)
+        this.focusedCard = { laneIndex, cardIndex: Math.min(currentIndex, originalLength - 1) };
+        this.updateVisualFocus();
         return;
       }
 
@@ -179,19 +194,21 @@ export class KeyboardNavigationManager {
         return;
       }
 
+      const currentLength = updatedLane.children.length;
+
       // If the lane hasn't been updated yet, try again
-      if (updatedLane.children.length === originalLength) {
+      if (currentLength === originalLength) {
         setTimeout(() => attemptRefocus(attempt + 1), 200);
         return;
       }
 
-      if (updatedLane.children.length === 0) {
+      if (currentLength === 0) {
         this.clearFocus();
         return;
       }
 
       // Restore focus to the next card
-      const newIndex = Math.min(currentIndex, updatedLane.children.length - 1);
+      const newIndex = Math.min(currentIndex, currentLength - 1);
       this.focusedCard = { laneIndex, cardIndex: newIndex };
       this.updateVisualFocus();
     };
@@ -300,6 +317,72 @@ export class KeyboardNavigationManager {
         contentWrapper.dispatchEvent(event);
       }
     }
+  }
+
+  private addCard(board: Board) {
+    if (!this.focusedCard) return;
+
+    // Find the "Add a card" button in the focused lane and click it
+    const lanes = this.rootElement.querySelectorAll('.kanban-plugin__lane');
+    if (lanes[this.focusedCard.laneIndex]) {
+      const lane = lanes[this.focusedCard.laneIndex];
+      const addButton = lane.querySelector('.kanban-plugin__new-item-button') as HTMLElement;
+      if (addButton) {
+        addButton.click();
+      }
+    }
+  }
+
+  private moveCardUp(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const cardIndex = this.focusedCard.cardIndex;
+    if (cardIndex === 0) return; // Already at top
+
+    const laneIndex = this.focusedCard.laneIndex;
+    const fromPath = [laneIndex, cardIndex];
+    const toPath = [laneIndex, cardIndex - 1];
+
+    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
+
+    // Move the card up
+    this.stateManager.setState((boardData) => {
+      const { moveEntity } = require('src/dnd/util/data');
+      return moveEntity(boardData, fromPath, toPath);
+    });
+
+    // Update focus to follow the card
+    this.focusedCard.cardIndex = cardIndex - 1;
+    setTimeout(() => this.updateVisualFocus(), 50);
+  }
+
+  private moveCardDown(board: Board) {
+    if (!this.focusedCard) return;
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const cardIndex = this.focusedCard.cardIndex;
+    if (cardIndex >= lane.children.length - 1) return; // Already at bottom
+
+    const laneIndex = this.focusedCard.laneIndex;
+    const fromPath = [laneIndex, cardIndex];
+    const toPath = [laneIndex, cardIndex + 1];
+
+    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
+
+    // Move the card down
+    this.stateManager.setState((boardData) => {
+      const { moveEntity } = require('src/dnd/util/data');
+      return moveEntity(boardData, fromPath, toPath);
+    });
+
+    // Update focus to follow the card
+    this.focusedCard.cardIndex = cardIndex + 1;
+    setTimeout(() => this.updateVisualFocus(), 50);
   }
 
   private updateVisualFocus() {

@@ -53,8 +53,11 @@ The original Kanban plugin features, plus:
 - **Visual focus indicator**: Blue outline shows currently selected card
 - **Quick actions**:
   - `Enter` - Edit focused card
+  - `a` - Add new card to focused list
   - `f` - Move focused card to any file
   - `d` - Delete focused card
+  - `j` - Move focused card down in list
+  - `k` - Move focused card up in list
   - `>` - Open context menu for focused card
   - `Escape` - Clear keyboard focus
 - **Hands-free workflow**: Manage entire board without touching the mouse
@@ -179,8 +182,11 @@ The original Kanban plugin features, plus:
 | `↑` `↓` | Navigate cards within a list |
 | `←` `→` | Navigate between lists |
 | `Enter` | Edit focused card |
+| `a` | Add new card to focused list |
 | `f` | Move focused card to any file |
 | `d` | Delete focused card |
+| `j` | Move focused card down in list |
+| `k` | Move focused card up in list |
 | `>` | Open context menu for focused card |
 | `Escape` | Clear keyboard focus |
 
