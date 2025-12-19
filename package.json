@@ -1,6 +1,6 @@
 {
   "name": "kanban-plus",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Enhanced Kanban boards with cross-file card movement, calendar integration, and advanced workflow features.",
   "main": "main.js",
   "scripts": {

@@ -54,10 +54,12 @@ The original Kanban plugin features, plus:
 - **Quick actions**:
   - `Enter` - Edit focused card
   - `a` - Add new card to focused list
+  - `c` - Copy focused card to calendar (with picker)
   - `f` - Move focused card to any file
   - `d` - Delete focused card
   - `j` - Move focused card down in list
   - `k` - Move focused card up in list
+  - `?` - Show keyboard shortcuts help
   - `Escape` - Clear keyboard focus
 - **Hands-free workflow**: Manage entire board without touching the mouse
 - **Smart scrolling**: Auto-scroll to keep focused card visible
@@ -182,10 +184,12 @@ The original Kanban plugin features, plus:
 | `←` `→` | Navigate between lists |
 | `Enter` | Edit focused card |
 | `a` | Add new card to focused list |
+| `c` | Copy focused card to calendar (with picker) |
 | `f` | Move focused card to any file |
 | `d` | Delete focused card |
 | `j` | Move focused card down in list |
 | `k` | Move focused card up in list |
+| `?` | Show keyboard shortcuts help |
 | `Escape` | Clear keyboard focus |
 
 ### Tips

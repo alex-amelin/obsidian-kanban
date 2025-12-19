@@ -3,6 +3,9 @@ import { KanbanView } from 'src/KanbanView';
 import { getBoardModifiers } from 'src/helpers/boardModifiers';
 import { Board, Item } from './types';
 import { handleAdHocMoveFromPath } from './Item/ItemMenu';
+import { CalendarSuggestModal, CalendarSource } from './FileSuggest/FileSuggestModal';
+import { KeyboardHelpModal } from './KeyboardHelpModal';
+import { createCalendarEvent, getFullCalendarDataSync } from './Item/helpers';
 import update from 'immutability-helper';
 
 interface FocusedCard {
@@ -92,6 +95,14 @@ export class KeyboardNavigationManager {
       case 'k':
         e.preventDefault();
         this.moveCardUp(board);
+        break;
+      case 'c':
+        e.preventDefault();
+        this.copyToCalendar(board);
+        break;
+      case '?':
+        e.preventDefault();
+        this.showHelp();
         break;
       case 'Escape':
         e.preventDefault();
@@ -479,6 +490,46 @@ export class KeyboardNavigationManager {
     }
 
     return null;
+  }
+
+  private copyToCalendar(board: Board) {
+    if (!this.focusedCard) return;
+
+    // Check if copy to calendar is enabled
+    const copyToCalendarEnabled = this.stateManager.getSetting('enable-copy-to-calendar');
+    if (!copyToCalendarEnabled) {
+      return;
+    }
+
+    const lane = board.children[this.focusedCard.laneIndex];
+    if (!lane || !lane.children) return;
+
+    const card = lane.children[this.focusedCard.cardIndex] as Item;
+    if (!card) return;
+
+    // Get available calendars
+    const calendars = getFullCalendarDataSync(this.stateManager);
+    if (calendars.length === 0) {
+      return;
+    }
+
+    const path = [this.focusedCard.laneIndex, this.focusedCard.cardIndex];
+    const boardModifiers = getBoardModifiers(this.view, this.stateManager);
+
+    // Show calendar picker
+    const calendarPicker = new CalendarSuggestModal(
+      this.stateManager.app,
+      calendars,
+      async (calendar: CalendarSource) => {
+        await createCalendarEvent(this.stateManager, card, calendar, path, boardModifiers);
+      }
+    );
+    calendarPicker.open();
+  }
+
+  private showHelp() {
+    const helpModal = new KeyboardHelpModal(this.stateManager.app);
+    helpModal.open();
   }
 
   private clearFocus() {

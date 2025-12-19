@@ -89,3 +89,39 @@ export class LaneSuggestModal extends FuzzySuggestModal<string> {
     this.onChooseCallback(lane);
   }
 }
+
+export interface CalendarSource {
+  type: string;
+  color: string;
+  directory: string;
+}
+
+export class CalendarSuggestModal extends FuzzySuggestModal<CalendarSource> {
+  private calendars: CalendarSource[];
+  private onChooseCallback: (calendar: CalendarSource) => void;
+
+  constructor(
+    app: App,
+    calendars: CalendarSource[],
+    onChoose: (calendar: CalendarSource) => void
+  ) {
+    super(app);
+    this.calendars = calendars;
+    this.onChooseCallback = onChoose;
+    this.setPlaceholder('Select a calendar to copy to...');
+  }
+
+  getItems(): CalendarSource[] {
+    return this.calendars;
+  }
+
+  getItemText(calendar: CalendarSource): string {
+    const parts = calendar.directory.split('/');
+    const leafName = parts[parts.length - 1];
+    return leafName || calendar.directory;
+  }
+
+  onChooseItem(calendar: CalendarSource): void {
+    this.onChooseCallback(calendar);
+  }
+}
