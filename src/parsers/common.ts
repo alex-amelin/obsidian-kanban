@@ -26,18 +26,6 @@ export const basicFrontmatter = ['---', '', `${frontmatterKey}: board`, '', '---
   '\n'
 );
 
-export function settingsToCodeblock(board: Board): string {
-  return [
-    '',
-    '',
-    '%% kanban:settings',
-    '```',
-    JSON.stringify(board.data.settings),
-    '```',
-    '%%',
-  ].join('\n');
-}
-
 export function getSearchValue(item: Item, stateManager: StateManager) {
   const fileMetadata = item.data.metadata.fileMetadata;
   const { titleSearchRaw } = item.data;

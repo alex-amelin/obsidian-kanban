@@ -1,6 +1,6 @@
 import { FileWithPath, fromEvent } from 'file-selector';
 import update from 'immutability-helper';
-import { Platform, TFile, TFolder, htmlToMarkdown, moment, parseLinktext, setIcon, Notice } from 'obsidian';
+import { Platform, TFile, TFolder, htmlToMarkdown, moment, parseLinktext, setIcon, Notice, Modal, App } from 'obsidian';
 import { StateManager } from 'src/StateManager';
 import { Path } from 'src/dnd/types';
 import { buildLinkToDailyNote } from 'src/helpers';
@@ -750,6 +750,87 @@ export function getCalendarDisplayName(directory: string): string {
   return leafName || directory;
 }
 
+/**
+ * Modal for prompting user to enter a title for calendar events
+ * Used when copying cards with images to calendar
+ */
+class TitleInputModal extends Modal {
+  private onSubmit: (title: string | null) => void;
+  private inputEl: HTMLInputElement;
+
+  constructor(app: App, onSubmit: (title: string | null) => void) {
+    super(app);
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    contentEl.createEl('h2', { text: 'Enter event title' });
+
+    contentEl.createEl('p', {
+      text: 'This card contains images. Please enter a title for the calendar event:',
+      cls: 'setting-item-description'
+    });
+
+    this.inputEl = contentEl.createEl('input', {
+      type: 'text',
+      placeholder: 'Event title...',
+    });
+    this.inputEl.style.width = '100%';
+    this.inputEl.style.marginTop = '10px';
+    this.inputEl.style.marginBottom = '10px';
+
+    // Focus the input
+    setTimeout(() => this.inputEl.focus(), 10);
+
+    // Submit on Enter key
+    this.inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.submit();
+      }
+    });
+
+    // Buttons container
+    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.gap = '10px';
+    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.marginTop = '20px';
+
+    // Cancel button
+    const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+    cancelBtn.addEventListener('click', () => {
+      this.onSubmit(null);
+      this.close();
+    });
+
+    // Submit button
+    const submitBtn = buttonContainer.createEl('button', {
+      text: 'Create Event',
+      cls: 'mod-cta'
+    });
+    submitBtn.addEventListener('click', () => {
+      this.submit();
+    });
+  }
+
+  submit() {
+    const title = this.inputEl.value.trim();
+    if (title) {
+      this.onSubmit(title);
+      this.close();
+    }
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
 function sanitizeFileName(name: string, maxLength: number = 30): string {
   // Remove illegal file name characters and limit length
   const illegalCharsRegEx = /[\\/:"*?<>|]+/g;
@@ -907,21 +988,43 @@ export async function createCalendarEvent(
     const cardTitle = item.data.titleRaw.split('\n')[0].trim();
     const fullCardContent = item.data.titleRaw.trim();
 
-    // Remove hashtags and images from the title for the event title/filename
-    // This ensures calendar event files have clean, short names
-    let titleWithoutHashtags = cardTitle
-      .replace(/#[^\s#]+/g, '')           // Remove hashtags
-      .replace(/!\[\[([^\]]*)\]\]/g, '')  // Remove image embeds like ![[image.png]]
-      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '') // Remove markdown images like ![alt](image.png)
-      .replace(/\[\[([^\]]*)\]\]/g, '$1') // Extract text from wikilinks [[link]]
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Extract text from markdown links [text](url)
-      .replace(/\s+/g, ' ')               // Normalize multiple spaces to single space
-      .trim();                            // Remove leading/trailing whitespace
+    // Check if card contains images
+    const hasImages = /!\[\[([^\]]*)\]\]|!\[([^\]]*)\]\([^)]*\)/.test(fullCardContent);
 
-    // If the title is empty or very short after cleanup, generate a default title
-    if (!titleWithoutHashtags || titleWithoutHashtags.length < 3) {
-      // Use a timestamp-based title for cards that are just images/links
-      titleWithoutHashtags = `Event ${moment().format('HH:mm')}`;
+    let titleWithoutHashtags: string;
+
+    if (hasImages) {
+      // Prompt user for title if card contains images
+      const userTitle = await new Promise<string | null>((resolve) => {
+        const modal = new TitleInputModal(stateManager.app, (title) => {
+          resolve(title);
+        });
+        modal.open();
+      });
+
+      if (!userTitle) {
+        // User cancelled
+        return false;
+      }
+
+      titleWithoutHashtags = userTitle;
+    } else {
+      // Remove hashtags and images from the title for the event title/filename
+      // This ensures calendar event files have clean, short names
+      titleWithoutHashtags = cardTitle
+        .replace(/#[^\s#]+/g, '')           // Remove hashtags
+        .replace(/!\[\[([^\]]*)\]\]/g, '')  // Remove image embeds like ![[image.png]]
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '') // Remove markdown images like ![alt](image.png)
+        .replace(/\[\[([^\]]*)\]\]/g, '$1') // Extract text from wikilinks [[link]]
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Extract text from markdown links [text](url)
+        .replace(/\s+/g, ' ')               // Normalize multiple spaces to single space
+        .trim();                            // Remove leading/trailing whitespace
+
+      // If the title is empty or very short after cleanup, generate a default title
+      if (!titleWithoutHashtags || titleWithoutHashtags.length < 3) {
+        // Use a timestamp-based title for cards that are just images/links
+        titleWithoutHashtags = `Event ${moment().format('HH:mm')}`;
+      }
     }
 
     // Further limit the title length for the filename and frontmatter

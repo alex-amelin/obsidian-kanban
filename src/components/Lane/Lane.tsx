@@ -91,7 +91,7 @@ function DraggableLaneRaw({
                 $set: shouldMarkItemsComplete,
               },
               checkChar: {
-                $set: shouldMarkItemsComplete ? getTaskStatusDone() : ' ',
+                $set: shouldMarkItemsComplete ? getTaskStatusDone() : '',
               },
             },
           })

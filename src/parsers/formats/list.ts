@@ -20,7 +20,7 @@ import { defaultSort } from 'src/helpers/util';
 import { t } from 'src/lang/helpers';
 import { visit } from 'unist-util-visit';
 
-import { archiveString, completeString, settingsToCodeblock } from '../common';
+import { archiveString, completeString } from '../common';
 import { DateNode, FileNode, TimeNode, ValueNode } from '../extensions/types';
 import {
   ContentBoundary,
@@ -107,7 +107,7 @@ export function listItemToItemData(stateManager: StateManager, md: string, item:
       fileMetadataOrder: undefined,
     },
     checked: item.checked,
-    checkChar: item.checked ? item.checkChar || ' ' : ' ',
+    checkChar: item.checked ? item.checkChar || '' : '',
   };
 
   visit(
@@ -246,6 +246,8 @@ export function astToUnhydratedBoard(
 ): Board {
   const lanes: Lane[] = [];
   const archive: Item[] = [];
+  const consumedListIndices = new Set<number>();
+
   root.children.forEach((child, index) => {
     if (child.type === 'heading') {
       const isArchive = isArchiveLane(child, root.children, index);
@@ -253,29 +255,41 @@ export function astToUnhydratedBoard(
       const title = getStringFromBoundary(md, headingBoundary);
 
       let shouldMarkItemsComplete = false;
+      let listIndex = -1;
 
-      const list = getNextOfType(root.children, index, 'list', (child) => {
-        if (child.type === 'heading') return false;
+      // Find the next list after this heading, tracking its index
+      for (let i = index + 1; i < root.children.length; i++) {
+        const nextChild = root.children[i];
 
-        if (child.type === 'paragraph') {
-          const childStr = toString(child);
+        if (nextChild.type === 'heading') {
+          // Stop at next heading
+          break;
+        }
 
-          if (childStr.startsWith('%% kanban:settings')) {
-            return false;
-          }
-
+        if (nextChild.type === 'paragraph') {
+          const childStr = toString(nextChild);
           if (childStr === t('Complete')) {
             shouldMarkItemsComplete = true;
-            return true;
+            continue;
           }
         }
 
-        return true;
-      });
+        if (nextChild.type === 'list') {
+          listIndex = i;
+          break;
+        }
+      }
+
+      const list = listIndex !== -1 ? (root.children[listIndex] as List) : null;
+
+      // Mark this list as consumed
+      if (listIndex !== -1) {
+        consumedListIndices.add(listIndex);
+      }
 
       if (isArchive && list) {
         archive.push(
-          ...(list as List).children.map((listItem) => {
+          ...list.children.map((listItem) => {
             return {
               ...ItemTemplate,
               id: generateInstanceId(),
@@ -298,23 +312,91 @@ export function astToUnhydratedBoard(
           },
         });
       } else {
-        lanes.push({
-          ...LaneTemplate,
-          children: (list as List).children.map((listItem) => {
-            const data = listItemToItemData(stateManager, md, listItem);
-            return {
-              ...ItemTemplate,
+        // Split list by checking line numbers for blank lines
+        const listItemGroups: Item[][] = [];
+        let currentGroup: Item[] = [];
+
+        for (let i = 0; i < list.children.length; i++) {
+          const listItem = list.children[i];
+
+          // Check if there's a blank line before this item (except first item)
+          if (i > 0) {
+            const prevItem = list.children[i - 1];
+            const prevEndLine = prevItem.position.end.line;
+            const currentStartLine = listItem.position.start.line;
+
+            // If line numbers differ by more than 1, there's a blank line
+            if (currentStartLine - prevEndLine > 1) {
+              // Start a new group
+              listItemGroups.push(currentGroup);
+              currentGroup = [];
+            }
+          }
+
+          currentGroup.push({
+            ...ItemTemplate,
+            id: generateInstanceId(),
+            data: listItemToItemData(stateManager, md, listItem),
+          });
+        }
+
+        // Add the last group
+        if (currentGroup.length > 0) {
+          listItemGroups.push(currentGroup);
+        }
+
+        // Create lane for the first group (belongs to this heading)
+        if (listItemGroups.length > 0) {
+          lanes.push({
+            ...LaneTemplate,
+            children: listItemGroups[0],
+            id: generateInstanceId(),
+            data: {
+              ...parseLaneTitle(title),
+              shouldMarkItemsComplete,
+            },
+          });
+
+          // Any additional groups become untitled lanes
+          for (let i = 1; i < listItemGroups.length; i++) {
+            lanes.push({
+              ...LaneTemplate,
+              children: listItemGroups[i],
               id: generateInstanceId(),
-              data,
-            };
-          }),
-          id: generateInstanceId(),
-          data: {
-            ...parseLaneTitle(title),
-            shouldMarkItemsComplete,
-          },
-        });
+              data: {
+                title: '',
+                maxItems: undefined,
+                shouldMarkItemsComplete: false,
+              },
+            });
+          }
+        }
       }
+    }
+  });
+
+  // Handle root list - collect any list items that weren't consumed by headings
+  // Each unconsumed list node becomes its own untitled lane
+  root.children.forEach((child, index) => {
+    if (child.type === 'list' && !consumedListIndices.has(index)) {
+      const list = child as List;
+
+      lanes.push({
+        ...LaneTemplate,
+        children: list.children.map((listItem) => {
+          return {
+            ...ItemTemplate,
+            id: generateInstanceId(),
+            data: listItemToItemData(stateManager, md, listItem),
+          };
+        }),
+        id: generateInstanceId(),
+        data: {
+          title: '',
+          maxItems: undefined,
+          shouldMarkItemsComplete: false,
+        },
+      });
     }
   });
 
@@ -333,7 +415,13 @@ export function astToUnhydratedBoard(
 }
 
 export function updateItemContent(stateManager: StateManager, oldItem: Item, newContent: string) {
-  const md = `- [${oldItem.data.checkChar}] ${addBlockId(indentNewLines(newContent), oldItem)}`;
+  // Use plain dash if no checkChar is set (empty string or undefined)
+  let md: string;
+  if (!oldItem.data.checkChar || oldItem.data.checkChar === '') {
+    md = `- ${addBlockId(indentNewLines(newContent), oldItem)}`;
+  } else {
+    md = `- [${oldItem.data.checkChar}] ${addBlockId(indentNewLines(newContent), oldItem)}`;
+  }
 
   const ast = parseFragment(stateManager, md);
   const itemData = listItemToItemData(stateManager, md, (ast.children[0] as List).children[0]);
@@ -358,7 +446,14 @@ export function newItem(
   checkChar: string,
   forceEdit?: boolean
 ) {
-  const md = `- [${checkChar}] ${indentNewLines(newContent)}`;
+  // Use plain dash if no checkChar is set (empty string or undefined)
+  let md: string;
+  if (!checkChar || checkChar === '') {
+    md = `- ${indentNewLines(newContent)}`;
+  } else {
+    md = `- [${checkChar}] ${indentNewLines(newContent)}`;
+  }
+
   const ast = parseFragment(stateManager, md);
   const itemData = listItemToItemData(stateManager, md, (ast.children[0] as List).children[0]);
 
@@ -401,15 +496,21 @@ export function reparseBoard(stateManager: StateManager, board: Board) {
 }
 
 function itemToMd(item: Item) {
+  // Use plain dash if no checkChar is set (empty string or undefined)
+  if (!item.data.checkChar || item.data.checkChar === '') {
+    return `- ${addBlockId(indentNewLines(item.data.titleRaw), item)}`;
+  }
   return `- [${item.data.checkChar}] ${addBlockId(indentNewLines(item.data.titleRaw), item)}`;
 }
 
 function laneToMd(lane: Lane) {
   const lines: string[] = [];
 
-  lines.push(`## ${replaceNewLines(laneTitleWithMaxItems(lane.data.title, lane.data.maxItems))}`);
-
-  lines.push('');
+  // Only write heading if title is not empty (root list has empty title)
+  if (lane.data.title) {
+    lines.push(`## ${replaceNewLines(laneTitleWithMaxItems(lane.data.title, lane.data.maxItems))}`);
+    lines.push('');
+  }
 
   if (lane.data.shouldMarkItemsComplete) {
     lines.push(completeString);
@@ -445,17 +546,13 @@ export function boardToMd(board: Board, stateManager?: StateManager) {
     return md + laneToMd(lane);
   }, '');
 
-  const frontmatter = ['---', '', stringifyYaml(board.data.frontmatter), '---', '', ''].join('\n');
-  const settingsBlock = settingsToCodeblock(board);
-  
-  // Check if settings should be placed at the beginning
-  const placeSettingsAtBeginning = stateManager?.getSetting('place-settings-at-beginning');
-  
-  if (placeSettingsAtBeginning) {
-    // Place settings at the beginning (after frontmatter)
-    return frontmatter + settingsBlock + '\n\n' + lanes + archiveToMd(board.data.archive);
-  } else {
-    // Default behavior: place settings at the end
-    return frontmatter + lanes + archiveToMd(board.data.archive) + settingsBlock;
-  }
+  // Merge board settings into frontmatter
+  const combinedFrontmatter = {
+    ...board.data.frontmatter,
+    ...board.data.settings,
+  };
+
+  const frontmatter = ['---', '', stringifyYaml(combinedFrontmatter), '---', '', ''].join('\n');
+
+  return frontmatter + lanes + archiveToMd(board.data.archive);
 }

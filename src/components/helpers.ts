@@ -87,7 +87,7 @@ export function maybeCompleteForMove(
           $set: newShouldComplete,
         },
         checkChar: {
-          $set: newShouldComplete ? getTaskStatusDone() : ' ',
+          $set: newShouldComplete ? getTaskStatusDone() : '',
         },
       },
     }),

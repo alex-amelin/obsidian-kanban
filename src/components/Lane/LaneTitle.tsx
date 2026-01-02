@@ -96,7 +96,7 @@ export function LaneTitle({ maxItems, editState, setEditState, title, onChange }
         />
       ) : (
         <div className={c('lane-title-text')}>
-          <MarkdownRenderer markdownString={title} />
+          {title ? <MarkdownRenderer markdownString={title} /> : <span style={{opacity: 0.5}}>(Untitled)</span>}
         </div>
       )}
     </div>

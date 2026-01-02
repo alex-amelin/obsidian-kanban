@@ -37,73 +37,17 @@ function extractFrontmatter(md: string) {
 }
 
 function extractSettingsFooter(md: string) {
-  let hasEntered = false;
-  let openTickCount = 0;
-  let settingsEnd = -1;
-
-  for (let i = md.length - 1; i >= 0; i--) {
-    if (!hasEntered && /[`%\n\r]/.test(md[i])) {
-      if (md[i] === '`') {
-        openTickCount++;
-
-        if (openTickCount === 3) {
-          hasEntered = true;
-          settingsEnd = i - 1;
-        }
-      }
-      continue;
-    } else if (!hasEntered) {
-      return {};
-    }
-
-    if (md[i] === '`' && md[i - 1] === '`' && md[i - 2] === '`' && /[\r\n]/.test(md[i - 3])) {
-      return JSON.parse(md.slice(i + 1, settingsEnd).trim());
-    }
-  }
+  // No longer read settings from %% kanban:settings footer
+  // All settings are now in YAML frontmatter
+  return {};
 }
 
 /**
- * Extracts kanban settings from the beginning of the markdown file
- * Looks for %% kanban:settings blocks at the start (after frontmatter)
+ * No longer reads settings from %% kanban:settings blocks
+ * All settings are now in YAML frontmatter only
  */
 function extractSettingsHeader(md: string) {
-  // Skip frontmatter if present
-  let startPos = 0;
-  if (md.startsWith('---')) {
-    const frontmatterEnd = md.indexOf('\n---', 3);
-    if (frontmatterEnd !== -1) {
-      startPos = frontmatterEnd + 4;
-    }
-  }
-  
-  // Look for kanban:settings block from the beginning
-  const searchText = md.slice(startPos);
-  const settingsStart = searchText.indexOf('%% kanban:settings');
-  
-  if (settingsStart === -1) {
-    return {};
-  }
-  
-  // Find the code block start (```)
-  const codeBlockStart = searchText.indexOf('```', settingsStart);
-  if (codeBlockStart === -1) {
-    return {};
-  }
-  
-  // Find the code block end
-  const codeBlockEnd = searchText.indexOf('```', codeBlockStart + 3);
-  if (codeBlockEnd === -1) {
-    return {};
-  }
-  
-  // Extract and parse the JSON settings
-  const settingsJson = searchText.slice(codeBlockStart + 3, codeBlockEnd).trim();
-  try {
-    return JSON.parse(settingsJson);
-  } catch (e) {
-    console.error('Error parsing kanban settings from header:', e);
-    return {};
-  }
+  return {};
 }
 
 function getExtensions(stateManager: StateManager) {
@@ -210,14 +154,9 @@ function getMdastExtensions(stateManager: StateManager) {
 
 export function parseMarkdown(stateManager: StateManager, md: string) {
   const mdFrontmatter = extractFrontmatter(md);
-  
-  // Try to extract settings from both header and footer
-  // Header takes precedence if both exist
-  const mdSettingsHeader = extractSettingsHeader(md);
-  const mdSettingsFooter = extractSettingsFooter(md);
-  const mdSettings = Object.keys(mdSettingsHeader).length > 0 ? mdSettingsHeader : mdSettingsFooter;
-  
-  const settings = { ...mdSettings };
+
+  // All settings come from YAML frontmatter only
+  const settings: Record<string, any> = {};
   const fileFrontmatter: Record<string, any> = {};
 
   Object.keys(mdFrontmatter).forEach((key) => {
