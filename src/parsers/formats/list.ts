@@ -376,26 +376,56 @@ export function astToUnhydratedBoard(
   });
 
   // Handle root list - collect any list items that weren't consumed by headings
-  // Each unconsumed list node becomes its own untitled lane
+  // Split by blank lines to create separate untitled lanes
   root.children.forEach((child, index) => {
     if (child.type === 'list' && !consumedListIndices.has(index)) {
       const list = child as List;
 
-      lanes.push({
-        ...LaneTemplate,
-        children: list.children.map((listItem) => {
-          return {
-            ...ItemTemplate,
-            id: generateInstanceId(),
-            data: listItemToItemData(stateManager, md, listItem),
-          };
-        }),
-        id: generateInstanceId(),
-        data: {
-          title: '',
-          maxItems: undefined,
-          shouldMarkItemsComplete: false,
-        },
+      // Split list items by blank lines
+      const listItemGroups: Item[][] = [];
+      let currentGroup: Item[] = [];
+
+      for (let i = 0; i < list.children.length; i++) {
+        const listItem = list.children[i];
+
+        // Check if there's a blank line before this item (except first item)
+        if (i > 0) {
+          const prevItem = list.children[i - 1];
+          const prevEndLine = prevItem.position.end.line;
+          const currentStartLine = listItem.position.start.line;
+
+          // If line numbers differ by more than 1, there's a blank line
+          if (currentStartLine - prevEndLine > 1) {
+            // Start a new group
+            listItemGroups.push(currentGroup);
+            currentGroup = [];
+          }
+        }
+
+        currentGroup.push({
+          ...ItemTemplate,
+          id: generateInstanceId(),
+          data: listItemToItemData(stateManager, md, listItem),
+        });
+      }
+
+      // Add the last group
+      if (currentGroup.length > 0) {
+        listItemGroups.push(currentGroup);
+      }
+
+      // Create an untitled lane for each group
+      listItemGroups.forEach((group) => {
+        lanes.push({
+          ...LaneTemplate,
+          children: group,
+          id: generateInstanceId(),
+          data: {
+            title: '',
+            maxItems: undefined,
+            shouldMarkItemsComplete: false,
+          },
+        });
       });
     }
   });
