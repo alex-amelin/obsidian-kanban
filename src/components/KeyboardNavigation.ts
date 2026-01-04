@@ -347,7 +347,7 @@ export class KeyboardNavigationManager {
     }
   }
 
-  private addCard(board: Board) {
+  private addCard(_board: Board) {
     if (!this.focusedCard) return;
 
     // Find the "Add a card" button in the focused lane and click it
@@ -361,7 +361,7 @@ export class KeyboardNavigationManager {
     }
   }
 
-  private moveCardUp(board: Board) {
+  private moveCardUp(_board: Board) {
     if (!this.focusedCard) return;
     if (this.isMoving) return; // Prevent concurrent moves
 
@@ -408,7 +408,7 @@ export class KeyboardNavigationManager {
     }, 50);
   }
 
-  private moveCardDown(board: Board) {
+  private moveCardDown(_board: Board) {
     if (!this.focusedCard) return;
     if (this.isMoving) return; // Prevent concurrent moves
 
@@ -475,7 +475,7 @@ export class KeyboardNavigationManager {
     }
   }
 
-  private findCardElement(cardId: string): HTMLElement | null {
+  private findCardElement(_cardId: string): HTMLElement | null {
     if (!this.focusedCard) return null;
 
     // Trust that focusedCard is already correct from the ID-based search in move functions

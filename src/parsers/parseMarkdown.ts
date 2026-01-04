@@ -36,19 +36,6 @@ function extractFrontmatter(md: string) {
   }
 }
 
-function extractSettingsFooter(md: string) {
-  // No longer read settings from %% kanban:settings footer
-  // All settings are now in YAML frontmatter
-  return {};
-}
-
-/**
- * No longer reads settings from %% kanban:settings blocks
- * All settings are now in YAML frontmatter only
- */
-function extractSettingsHeader(md: string) {
-  return {};
-}
 
 function getExtensions(stateManager: StateManager) {
   return [
