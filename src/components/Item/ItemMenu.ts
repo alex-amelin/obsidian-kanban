@@ -243,11 +243,15 @@ export function useItemMenu({
             .setTitle(t('New note from card'))
             .onClick(async () => {
               const prevTitle = item.data.titleRaw.split('\n')[0].trim();
+
+              // Extract tags from the title (e.g., #Бизнес #Важное)
+              const tagsInTitle = prevTitle.match(tagRegEx) || [];
+
               const sanitizedTitle = prevTitle
                 .replace(embedRegEx, '$1')
                 .replace(wikilinkRegEx, '$1')
                 .replace(mdLinkRegEx, '$1')
-                .replace(tagRegEx, '$1')
+                .replace(tagRegEx, '')
                 .replace(illegalCharsRegEx, ' ')
                 .trim()
                 .replace(condenceWhiteSpaceRE, ' ');
@@ -272,9 +276,12 @@ export function useItemMenu({
 
               await applyTemplate(stateManager, newNoteTemplatePath as string | undefined);
 
+              // Keep tags in the card - replace only the text part, preserve tags
+              const tagsString = tagsInTitle.join(' ');
+              const markdownLink = stateManager.app.fileManager.generateMarkdownLink(newFile, stateManager.file.path);
               const newTitleRaw = item.data.titleRaw.replace(
                 prevTitle,
-                stateManager.app.fileManager.generateMarkdownLink(newFile, stateManager.file.path)
+                markdownLink + (tagsString ? ' ' + tagsString : '')
               );
 
               boardModifiers.updateItem(path, stateManager.updateItemContent(item, newTitleRaw));
