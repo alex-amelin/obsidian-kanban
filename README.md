@@ -100,6 +100,11 @@ The original Kanban plugin features, plus:
 - **Calendar hashtag control**: Toggle automatic hashtag addition on/off
 - **Enhanced settings inheritance**: From global to board level
 
+#### 📝 **Smart Note Creation**
+
+- **Clean filenames**: Tags are excluded from note filenames when using "New note from card"
+- **Tags preserved on card**: Card keeps its tags after note creation (e.g., `[[My Task]] #Work #Urgent`)
+
 ### 🔄 **Original Kanban Features**
 
 - Drag-and-drop card management
