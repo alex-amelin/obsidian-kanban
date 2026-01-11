@@ -14,3 +14,6 @@ dist
 test-vault/
 main.js
 styles.css
+package-lock.json
+.claude/settings.local.json
+package-lock.json
