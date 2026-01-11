@@ -55,21 +55,27 @@ export function listItemToItemData(stateManager: StateManager, md: string, item:
   const startNode = item.children.first();
   const endNode = item.children.last();
 
-  const start =
-    startNode.type === 'paragraph'
-      ? getNodeContentBoundary(startNode).start
-      : startNode.position.start.offset;
-  const end =
-    endNode.type === 'paragraph'
-      ? getNodeContentBoundary(endNode).end
-      : endNode.position.end.offset;
-  const itemBoundary: ContentBoundary = { start, end };
+  // Handle empty list item (e.g., "- " with no content)
+  let itemContent = '';
+  let itemBoundary: ContentBoundary = { start: 0, end: 0 };
 
-  let itemContent = getStringFromBoundary(md, itemBoundary);
+  if (startNode && endNode) {
+    const start =
+      startNode.type === 'paragraph'
+        ? getNodeContentBoundary(startNode).start
+        : startNode.position.start.offset;
+    const end =
+      endNode.type === 'paragraph'
+        ? getNodeContentBoundary(endNode).end
+        : endNode.position.end.offset;
+    itemBoundary = { start, end };
 
-  // Handle empty task
-  if (itemContent === '[' + (item.checked ? item.checkChar : ' ') + ']') {
-    itemContent = '';
+    itemContent = getStringFromBoundary(md, itemBoundary);
+
+    // Handle empty task
+    if (itemContent === '[' + (item.checked ? item.checkChar : ' ') + ']') {
+      itemContent = '';
+    }
   }
 
   let title = itemContent;
